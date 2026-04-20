@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estimador de Edad - Cámara</title>
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <style>
+    body { 
+      font-family: 'Segoe UI', sans-serif; 
+      background: #000; 
+      color: #fff; 
+      text-align: center; 
+      margin: 0; 
+      padding: 20px;
+    }
+    #video { width: 100%; max-width: 640px; border-radius: 15px; }
+    #result { font-size: 2rem; margin: 20px; color: #00ffcc; }
+    button { padding: 15px 30px; font-size: 1.3rem; margin: 10px; border-radius: 50px; }
+  </style>
+</head>
+<body>
+  <h1>Estimador de Edad con Cámara</h1>
+  <p>Permite el acceso a la cámara y mira hacia ella</p>
+
+  <video id="video" autoplay muted></video>
+  <div id="result">Cargando modelo de IA...</div>
+  <button onclick="startCamera()">Iniciar Cámara</button>
+
+  <script>
+    const video = document.getElementById('video');
+    const resultDiv = document.getElementById('result');
+
+    async function loadModels() {
+      await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights');
+      await faceapi.nets.ageGenderNet.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights');
+      resultDiv.textContent = "Modelo cargado. Inicia la cámara.";
+    }
+
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        detectFace();
+      } catch (err) {
+        resultDiv.textContent = "Error al acceder a la cámara. Asegúrate de permitir el acceso.";
+      }
+    }
+
+    async function detectFace() {
+      await loadModels(); // ya cargado pero por si acaso
+
+      setInterval(async () => {
+        if (video.paused || video.ended) return;
+
+        const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+          .withAgeAndGender();
+
+        if (detections.length > 0) {
+          const age = Math.round(detections[0].age);
+          const gender = detections[0].gender;
+          resultDiv.innerHTML = `Edad estimada: <strong>${age} años</strong><br>Género: ${gender === 'male' ? 'Masculino' : 'Femenino'}`;
+        }
+      }, 800);
+    }
+
+    // Iniciar automáticamente al cargar
+    window.onload = () => {
+      loadModels();
+    };
+  </script>
+</body>
+</html>
